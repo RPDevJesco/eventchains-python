@@ -13,6 +13,7 @@
 - [Core Concepts](#core-concepts)
 - [Universal Applicability](#universal-applicability)
 - [The ML Revolution](#the-ml-revolution)
+- [Production Middleware](#production-middleware)
 - [Performance Analysis](#performance-analysis)
 - [Real-World Results](#real-world-results)
 - [Getting Started](#getting-started)
@@ -479,6 +480,219 @@ Every training iteration logs:
 ```
 
 **Complete transparency** - you can see EVERYTHING that happened.
+
+---
+
+## Production Middleware
+
+### Making ML Training Production-Ready
+
+Beyond diagnostics, EventChains ML provides production-grade middleware for building robust, compliant ML systems:
+
+#### 1. AuditLogMiddleware - Complete Experiment Tracking
+
+```python
+from eventchains_ml import AuditLogMiddleware
+
+audit_log = AuditLogMiddleware(
+    log_file='experiment_audit.jsonl',
+    log_to_console=False
+)
+
+training_chain = (EventChain()
+    .add_event(LoadBatchEvent(dataloader))
+    .add_event(ForwardPassEvent())
+    .add_event(CalculateLossEvent(criterion))
+    .add_event(BackpropagationEvent())
+    .add_event(UpdateWeightsEvent(optimizer))
+    .use_middleware(audit_log))
+
+for epoch in range(num_epochs):
+    context = EventContext({
+        'model': model,
+        'experiment_id': 'mnist_v1',
+        'hyperparameters': {'lr': 0.001, 'batch_size': 64}
+    })
+    result = training_chain.execute(context)
+
+audit_log.close()
+```
+
+**Benefits:**
+- Every training decision logged to JSONL
+- Full experiment reproducibility
+- Compliance-ready audit trails
+- Model lineage tracking
+
+#### 2. ValidationMiddleware - Real-Time Data Validation
+
+```python
+from eventchains_ml import ValidationMiddleware
+
+validation = ValidationMiddleware(
+    strict=True,   # Fail on validation errors
+    verbose=True   # Print warnings
+)
+
+training_chain = (EventChain()
+    .add_event(LoadBatchEvent(dataloader))
+    .add_event(ForwardPassEvent())
+    .add_event(CalculateLossEvent(criterion))
+    .use_middleware(validation))
+
+context = EventContext({'model': model, 'batch': batch, 'labels': labels})
+result = training_chain.execute(context)
+
+if not result.success:
+    print(f"Validation failed: {result.error}")
+```
+
+**Catches:**
+- NaN/Inf values in tensors
+- Shape mismatches between batch and labels
+- Invalid gradients after backpropagation
+- Data integrity issues
+
+**Example Output:**
+```
+⚠️  pre: NaN detected in 'batch'
+⚠️  post: Batch size mismatch - batch: 32, labels: 16
+⚠️  post: Invalid gradient in layers.0.weight
+```
+
+#### 3. MetricsCollectorMiddleware - Monitoring Integration
+
+```python
+from eventchains_ml import MetricsCollectorMiddleware
+
+metrics = MetricsCollectorMiddleware(
+    export_format='prometheus',  # or 'json', 'statsd'
+    export_file='metrics.txt'
+)
+
+training_chain = (EventChain()
+    .add_event(LoadBatchEvent(dataloader))
+    .add_event(ForwardPassEvent())
+    .add_event(CalculateLossEvent(criterion))
+    .use_middleware(metrics))
+
+for batch_idx in range(num_batches):
+    context = EventContext({
+        'model': model,
+        'loss_value': 0.5,
+        'val_accuracy': 95.0
+    })
+    result = training_chain.execute(context)
+
+metrics.export_metrics()
+```
+
+**Exports to:**
+- Prometheus (Grafana dashboards)
+- JSON (custom monitoring)
+- StatsD (Graphite integration)
+
+**Tracks:**
+- Event execution counts and durations
+- Success/failure rates
+- ML metrics (loss, accuracy, learning rate, gradient norms)
+
+#### 4. CompressionMiddleware - Memory Optimization
+
+```python
+from eventchains_ml import CompressionMiddleware
+
+compression = CompressionMiddleware(
+    compress_keys=['layer_activations'],
+    compression_level=6,
+    threshold_mb=1.0
+)
+
+training_chain = (EventChain()
+    .add_event(ForwardPassEvent(track_activations=True))
+    .use_middleware(compression))
+
+context = EventContext({'model': model})
+result = training_chain.execute(context)
+
+if context.has('layer_activations_compressed'):
+    compressed_data = context.get('layer_activations_compressed')
+    print(f"Space saved: {compressed_data['original_bytes'] / compressed_data['compressed_bytes']:.1f}x")
+    
+    original = compression.decompress(compressed_data)
+
+compression.print_stats()
+```
+
+**Benefits:**
+- 80-90% memory reduction for large tensors
+- Lossless compression (perfect reconstruction)
+- Configurable compression level and threshold
+- Automatic detection of large tensors
+
+**Example Output:**
+```
+================================================================================
+Compression Statistics
+================================================================================
+Tensors compressed: 600
+Original size: 1250.00 MB
+Compressed size: 125.00 MB
+Space saved: 1125.00 MB (90.0%)
+Compression ratio: 0.10x
+================================================================================
+```
+
+### Production Stack Example
+
+Combine all middleware for production-ready training:
+
+```python
+from eventchains_ml import (
+    AuditLogMiddleware,
+    ValidationMiddleware,
+    MetricsCollectorMiddleware,
+    CompressionMiddleware,
+)
+
+audit_log = AuditLogMiddleware(log_file='audit.jsonl')
+validation = ValidationMiddleware(strict=True, verbose=True)
+metrics = MetricsCollectorMiddleware(export_format='prometheus')
+compression = CompressionMiddleware(compress_keys=['layer_activations'])
+
+training_chain = (EventChain()
+    .add_event(LoadBatchEvent(dataloader))
+    .add_event(ForwardPassEvent(track_activations=True))
+    .add_event(CalculateLossEvent(criterion))
+    .add_event(BackpropagationEvent(track_gradients=True))
+    .add_event(UpdateWeightsEvent(optimizer))
+    .use_middleware(audit_log)
+    .use_middleware(validation)
+    .use_middleware(metrics)
+    .use_middleware(compression))
+
+for epoch in range(num_epochs):
+    for batch_idx in range(num_batches):
+        context = EventContext({
+            'model': model,
+            'device': device,
+            'experiment_id': 'production_v1',
+        })
+        result = training_chain.execute(context)
+
+metrics.export_metrics()
+compression.print_stats()
+audit_log.close()
+```
+
+**Production Benefits:**
+- ✅ Complete audit trail for compliance
+- ✅ Real-time data validation
+- ✅ Prometheus/Grafana monitoring
+- ✅ Memory-efficient tensor storage
+- ✅ Full experiment reproducibility
+
+**See:** `eventchains_ml/PRODUCTION_MIDDLEWARE.md` for detailed documentation
 
 ---
 
