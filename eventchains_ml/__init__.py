@@ -30,6 +30,10 @@ from .middleware import (
     PerformanceProfilerMiddleware,
     TensorBoardMiddleware,
     EarlyStoppingMiddleware,
+    AuditLogMiddleware,
+    ValidationMiddleware,
+    MetricsCollectorMiddleware,
+    CompressionMiddleware,
 )
 
 __all__ = [
@@ -47,4 +51,8 @@ __all__ = [
     'PerformanceProfilerMiddleware',
     'TensorBoardMiddleware',
     'EarlyStoppingMiddleware',
+    'AuditLogMiddleware',
+    'ValidationMiddleware',
+    'MetricsCollectorMiddleware',
+    'CompressionMiddleware',
 ]
