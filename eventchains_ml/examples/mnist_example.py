@@ -4,12 +4,12 @@ MNIST Training Example with EventChains ML
 This example demonstrates how EventChains ML brings complete observability
 to neural network training, making it easy to detect and debug issues.
 """
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+from datetime import datetime
 
 from eventchains import EventChain, EventContext
 from eventchains_ml import (
@@ -173,6 +173,12 @@ def validate(chain, model, device, criterion):
 
 
 def main():
+    now = datetime.now()
+    # Format the time as a string (e.g., HH:MM:SS)
+    current_time = now.strftime("%H:%M:%S")
+
+    # Print the formatted current time
+    print("Current Time =", current_time)
     print("=" * 80)
     print("MNIST Training with EventChains ML")
     print("Full Observability & Debugging Example")
@@ -274,7 +280,7 @@ def main():
     print("✓ Easy debugging when issues occur")
     print("✓ Full audit trail for reproducibility")
     print("=" * 80)
-
+    print("Current Time =", current_time)
 
 if __name__ == "__main__":
     main()
