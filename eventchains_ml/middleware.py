@@ -84,7 +84,6 @@ class GradientMonitorMiddleware(Middleware):
         """Clear the list of detected issues."""
         self.issues_detected.clear()
 
-
 class DeadNeuronDetectorMiddleware(Middleware):
     """
     Detect dead or dying neurons (ReLU neurons that always output zero).
@@ -144,7 +143,6 @@ class DeadNeuronDetectorMiddleware(Middleware):
     def clear(self):
         """Clear the list of dead layers."""
         self.dead_layers.clear()
-
 
 class PerformanceProfilerMiddleware(Middleware):
     """
@@ -249,7 +247,6 @@ class PerformanceProfilerMiddleware(Middleware):
         self.call_counts.clear()
         self.start_time = None
 
-
 class TensorBoardMiddleware(Middleware):
     """
     Log training metrics to TensorBoard.
@@ -327,7 +324,6 @@ class TensorBoardMiddleware(Middleware):
         if self.writer is not None:
             self.writer.close()
 
-
 class EarlyStoppingMiddleware(Middleware):
     """
     Implement early stopping based on validation loss.
@@ -393,7 +389,6 @@ class EarlyStoppingMiddleware(Middleware):
         self.best_loss = float('inf')
         self.counter = 0
         self.should_stop = False
-
 
 class AuditLogMiddleware(Middleware):
     """
@@ -517,7 +512,6 @@ class AuditLogMiddleware(Middleware):
             'total_events': self.event_counter,
         })
 
-
 class ValidationMiddleware(Middleware):
     """
     Validate tensor shapes, data ranges, and model states during training.
@@ -623,7 +617,6 @@ class ValidationMiddleware(Middleware):
     def clear_errors(self):
         """Clear validation errors."""
         self.validation_errors.clear()
-
 
 class MetricsCollectorMiddleware(Middleware):
     """
@@ -806,7 +799,6 @@ class MetricsCollectorMiddleware(Middleware):
         
         return summary
 
-
 class CompressionMiddleware(Middleware):
     """
     Compress large tensor data in context to reduce memory usage.
@@ -941,3 +933,58 @@ class CompressionMiddleware(Middleware):
         print(f"Space saved: {stats['space_saved_mb']:.2f} MB ({stats['space_saved_percent']:.1f}%)")
         print(f"Compression ratio: {stats['compression_ratio']:.2f}x")
         print("=" * 80)
+
+class MarginMiddleware(Middleware):
+    """Enforce separation margin from Lemma D.1"""
+
+    def execute(self, context, next_callable):
+        margin = context.get('margin', 0.01)
+        epsilon = margin / 2  # Theorem requires ε < Δ/2
+        context.set('epsilon', epsilon)
+        return next_callable(context)
+
+class InversionMetricsMiddleware(Middleware):
+    """Track inversion performance metrics"""
+
+    def __init__(self):
+        self.attempts = []
+        self.successes = []
+        self.failures = []
+
+    def execute(self, context, next_callable):
+        start_time = time.time()
+        attempts_before = context.get('attempts', 0)
+
+        result = next_callable(context)
+
+        elapsed = time.time() - start_time
+        attempts_after = context.get('attempts', 0)
+
+        if context.get('verified', False):
+            self.successes.append({
+                'elapsed': elapsed,
+                'attempts': attempts_after - attempts_before,
+                'distance': context.get('distance')
+            })
+
+        return result
+
+class CollisionLoggingMiddleware(Middleware):
+    """Log collision events for thesis validation"""
+
+    def execute(self, context, next_callable):
+        result = next_callable(context)
+
+        collisions = context.get('collisions', [])
+        if collisions:
+            print(f"⚠️  COLLISION DETECTED!")
+            for collision in collisions:
+                print(f"   Token '{collision['token1']}' and '{collision['token2']}' "
+                      f"have identical hidden states")
+            print(f"   Total collisions: {len(collisions)}")
+            print(f"   Thesis prediction: 0 collisions")
+            print(f"   THESIS VIOLATED ❌")
+        else:
+            print(f"✓ No collisions found (thesis prediction: ✓)")
+
+        return result

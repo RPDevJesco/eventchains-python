@@ -8,7 +8,6 @@ Each event handles one specific aspect of training, making the process transpare
 import torch
 from eventchains import ChainableEvent, Result
 
-
 class LoadBatchEvent(ChainableEvent):
     """
     Load a batch of data from the dataloader.
@@ -52,7 +51,6 @@ class LoadBatchEvent(ChainableEvent):
             # Reset iterator for next epoch
             self.iterator = None
             return Result.fail('No more batches in dataloader')
-
 
 class ForwardPassEvent(ChainableEvent):
     """
@@ -145,7 +143,6 @@ class ForwardPassEvent(ChainableEvent):
                 }
         return stats
 
-
 class CalculateLossEvent(ChainableEvent):
     """
     Calculate loss between model output and target labels.
@@ -190,7 +187,6 @@ class CalculateLossEvent(ChainableEvent):
         
         except Exception as e:
             return Result.fail(f'Loss calculation failed: {str(e)}')
-
 
 class BackpropagationEvent(ChainableEvent):
     """
@@ -248,7 +244,6 @@ class BackpropagationEvent(ChainableEvent):
         except Exception as e:
             return Result.fail(f'Backpropagation failed: {str(e)}')
 
-
 class UpdateWeightsEvent(ChainableEvent):
     """
     Update model weights using the optimizer.
@@ -290,7 +285,6 @@ class UpdateWeightsEvent(ChainableEvent):
         
         except Exception as e:
             return Result.fail(f'Weight update failed: {str(e)}')
-
 
 class ValidationEvent(ChainableEvent):
     """
@@ -366,3 +360,93 @@ class ValidationEvent(ChainableEvent):
         except Exception as e:
             model.train()
             return Result.fail(f'Validation failed: {str(e)}')
+
+class TokenCandidateEvent(ChainableEvent):
+    """Generate next token candidate using policy"""
+
+    def __init__(self, policy):
+        self.policy = policy
+
+    def execute(self, context):
+        candidate = self.policy.next_candidate()
+        if candidate is None:
+            return Result.fail("No more candidates")
+        context.set('candidate', candidate)
+        return Result.ok()
+
+class ForwardPassInversionEvent(ChainableEvent):
+    """Run forward pass for candidate token"""
+
+    def __init__(self, model, layer_idx):
+        self.model = model
+        self.layer_idx = layer_idx
+
+    def execute(self, context):
+        candidate = context.get('candidate')
+        prefix = context.get('prefix', [])
+
+        # Forward pass to target layer
+        with torch.no_grad():
+            hidden = self.model.forward_to_layer(
+                prefix + [candidate],
+                self.layer_idx
+            )
+
+        context.set('predicted_hidden', hidden)
+        return Result.ok()
+
+class VerifyAcceptanceEvent(ChainableEvent):
+    """Verify if candidate is within acceptance region"""
+
+    def __init__(self, epsilon=0.0):
+        self.epsilon = epsilon
+
+    def execute(self, context):
+        predicted = context.get('predicted_hidden')
+        target = context.get('target_hidden')
+
+        distance = torch.norm(predicted - target).item()
+
+        context.set('distance', distance)
+
+        if distance < self.epsilon:
+            context.set('verified', True)
+            context.set('recovered_token', context.get('candidate'))
+            return Result.ok()  # Signal to stop
+
+        context.set('verified', False)
+        return Result.ok()  # Continue searching
+
+class CollisionDetectionEvent(ChainableEvent):
+    """Test for collisions in token representations"""
+
+    def execute(self, context):
+        model = context.get('model')
+        vocabulary = context.get('vocabulary')
+        layer_idx = context.get('layer_idx')
+        prefix = context.get('prefix', [])
+
+        representations = {}
+        collisions = []
+
+        with torch.no_grad():
+            for token in vocabulary:
+                hidden = model.forward_to_layer(
+                    prefix + [token],
+                    layer_idx
+                )
+                hidden_key = tuple(hidden.cpu().numpy().round(6))
+
+                if hidden_key in representations:
+                    collisions.append({
+                        'token1': representations[hidden_key],
+                        'token2': token,
+                        'hidden': hidden
+                    })
+                else:
+                    representations[hidden_key] = token
+
+        context.set('num_collisions', len(collisions))
+        context.set('collisions', collisions)
+
+        return Result.ok()
