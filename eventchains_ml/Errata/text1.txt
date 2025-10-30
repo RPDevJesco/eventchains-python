@@ -1,6 +1,6 @@
 C:\Users\jglov\AppData\Local\Programs\Python\Python312\python.exe C:\Users\jglov\PycharmProjects\eventchains-python\eventchains_ml\tests\test_transformer_invertibility.py 
 TRANSFORMER INVERTIBILITY VALIDATION
-Using EventChains to test arXiv:2510.15511v3
+Using EventChains to test arXiv:2510.15511v3 with a small sample size
 
 ================================================================================
 TEST 1: COLLISION RATE (Monte Carlo)
