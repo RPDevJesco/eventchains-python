@@ -364,14 +364,20 @@ class ValidationEvent(ChainableEvent):
 class TokenCandidateEvent(ChainableEvent):
     """Generate next token candidate using policy"""
 
-    def __init__(self, policy):
+    def __init__(self, policy=None):
         self.policy = policy
 
     def execute(self, context):
-        candidate = self.policy.next_candidate()
+        # Use policy from context if not provided during init
+        policy = self.policy or context.get('policy')
+        if policy is None:
+            return Result.fail("No policy provided")
+
+        candidate = policy.next_candidate()
         if candidate is None:
             return Result.fail("No more candidates")
         context.set('candidate', candidate)
+        context.set('attempts', context.get('attempts', 0) + 1)
         return Result.ok()
 
 class ForwardPassInversionEvent(ChainableEvent):
@@ -398,7 +404,7 @@ class ForwardPassInversionEvent(ChainableEvent):
 class VerifyAcceptanceEvent(ChainableEvent):
     """Verify if candidate is within acceptance region"""
 
-    def __init__(self, epsilon=0.0):
+    def __init__(self, epsilon=1e-6):
         self.epsilon = epsilon
 
     def execute(self, context):
@@ -409,7 +415,8 @@ class VerifyAcceptanceEvent(ChainableEvent):
 
         context.set('distance', distance)
 
-        if distance < self.epsilon:
+        # Use <= for exact match when epsilon is very small
+        if distance <= self.epsilon:
             context.set('verified', True)
             context.set('recovered_token', context.get('candidate'))
             return Result.ok()  # Signal to stop

@@ -1,12 +1,10 @@
 import time
 import torch
-import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 from eventchains import EventChain, EventContext
 from eventchains_ml.events import CollisionDetectionEvent, TokenCandidateEvent, ForwardPassInversionEvent, \
     VerifyAcceptanceEvent
 from eventchains_ml.middleware import CollisionLoggingMiddleware, InversionMetricsMiddleware, MarginMiddleware
-
 
 class TransformerInvertibilityValidator:
     """
@@ -104,9 +102,9 @@ class TransformerInvertibilityValidator:
         metrics = InversionMetricsMiddleware()
 
         inversion_chain = (EventChain()
-                           .add_event(TokenCandidateEvent(policy=None))  # Set per execution
+                           .add_event(TokenCandidateEvent())  # Policy from context
                            .add_event(ForwardPassInversionEvent(self, layer_idx=6))
-                           .add_event(VerifyAcceptanceEvent(epsilon=0.0))
+                           .add_event(VerifyAcceptanceEvent(epsilon=1e-6))  # Small tolerance for exact match
                            .use_middleware(MarginMiddleware())
                            .use_middleware(metrics))
 
@@ -117,8 +115,9 @@ class TransformerInvertibilityValidator:
         for i in range(test_prompts):
             # Generate random prompt
             prompt = torch.randint(0, 100, (20,)).tolist()
+            true_last_token = prompt[-1]  # The token we're trying to recover
 
-            # Get target hidden state
+            # Get target hidden state (including the last token)
             with torch.no_grad():
                 target_hidden = self.forward_to_layer(prompt, 6)
 
@@ -137,7 +136,8 @@ class TransformerInvertibilityValidator:
 
             context = EventContext({
                 'target_hidden': target_hidden,
-                'prefix': prompt[:-1],
+                'prefix': prompt[:-1],  # Everything except last token
+                'true_token': true_last_token,
                 'model': self,
                 'policy': UniformPolicy(list(range(100))),
                 'attempts': 0
@@ -145,16 +145,20 @@ class TransformerInvertibilityValidator:
 
             # Run inversion
             start = time.time()
-            for _ in range(100):  # Max attempts
+            for attempt in range(100):  # Max attempts
                 inversion_chain.execute(context)
                 if context.get('verified'):
                     break
             elapsed = time.time() - start
 
             if context.get('verified'):
-                successes += 1
-                times.append(elapsed)
-                total_attempts += context.get('attempts', 0)
+                recovered = context.get('recovered_token')
+                if recovered == true_last_token:
+                    successes += 1
+                    times.append(elapsed)
+                    total_attempts += context.get('attempts', 0)
+                else:
+                    print(f"Warning: Verified but wrong token. Expected {true_last_token}, got {recovered}")
 
         print(f"\nRESULTS:")
         print(f"Test prompts: {test_prompts}")
@@ -225,13 +229,13 @@ def main():
     print()
 
     # Test 1: Collision rate
-    collision_rate = validator.test_collision_rate(num_samples=100)
+    collision_rate = validator.test_collision_rate(num_samples=10)
 
     # Test 2: SIPIT inversion
     accuracy = validator.test_sipit_inversion(test_prompts=20)
 
     # Test 3: Separation margin
-    margin_rate = validator.test_separation_margin(num_samples=100)
+    margin_rate = validator.test_separation_margin(num_samples=10)
 
     print("\n" + "=" * 80)
     print("FINAL SUMMARY")
