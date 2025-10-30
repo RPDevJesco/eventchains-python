@@ -1,10 +1,42 @@
 C:\Users\jglov\AppData\Local\Programs\Python\Python312\python.exe C:\Users\jglov\PycharmProjects\eventchains-python\eventchains_ml\tests\test_transformer_invertibility.py 
+================================================================================
 TRANSFORMER INVERTIBILITY VALIDATION
-Using EventChains to test arXiv:2510.15511v3 with a small sample size
+Using EventChains to test arXiv:2510.15511v3 Sample
 
+================================================================================
 ================================================================================
 TEST 1: COLLISION RATE (Monte Carlo)
 ================================================================================
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
+✓ No collisions found (thesis prediction: ✓)
 ✓ No collisions found (thesis prediction: ✓)
 ✓ No collisions found (thesis prediction: ✓)
 ✓ No collisions found (thesis prediction: ✓)
@@ -22,7 +54,6 @@ Total collisions: 0
 Collision rate: 0.0000
 Thesis prediction: 0.0000
 Match: ✓ PASS
-
 ================================================================================
 TEST 2: SIPIT INVERSION
 ================================================================================
@@ -31,11 +62,10 @@ RESULTS:
 Test prompts: 20
 Successful inversions: 20
 Accuracy: 100.0%
-Avg attempts: 47.5
-Avg time: 1.549s
+Avg attempts: 47.6
+Avg time: 1.527s
 Thesis prediction: 100% accuracy, O(vocab_size) time
 Match: ✓ PASS
-
 ================================================================================
 TEST 3: SEPARATION MARGIN
 ================================================================================
@@ -44,9 +74,9 @@ RESULTS:
 Samples: 10
 Positive margins: 10
 Rate: 100.0%
-Min margin: 38.138149
-Max margin: 50.872761
-Mean margin: 45.618211
+Min margin: 42.805027
+Max margin: 51.475323
+Mean margin: 47.622328
 Thesis prediction: 100% positive
 Match: ✓ PASS
 
