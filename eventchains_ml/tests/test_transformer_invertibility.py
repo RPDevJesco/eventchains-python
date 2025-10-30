@@ -228,13 +228,13 @@ def main():
     print("Using EventChains to test arXiv:2510.15511v3")
     print()
 
-    # Test 1: Collision rate
+    # Test 1: Collision rate (for actual testing of the thesis, we'd need to increase this value to 1000)
     collision_rate = validator.test_collision_rate(num_samples=10)
 
-    # Test 2: SIPIT inversion
+    # Test 2: SIPIT inversion  (for actual testing of the thesis, we'd need to increase this value to 100)
     accuracy = validator.test_sipit_inversion(test_prompts=20)
 
-    # Test 3: Separation margin
+    # Test 3: Separation margin  (for actual testing of the thesis, we'd need to increase this value to 100)
     margin_rate = validator.test_separation_margin(num_samples=10)
 
     print("\n" + "=" * 80)
