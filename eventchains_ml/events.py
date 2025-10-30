@@ -383,7 +383,7 @@ class TokenCandidateEvent(ChainableEvent):
 class ForwardPassInversionEvent(ChainableEvent):
     """Run forward pass for candidate token"""
 
-    def __init__(self, model, layer_idx):
+    def __init__(self, model=None, layer_idx=6):
         self.model = model
         self.layer_idx = layer_idx
 
@@ -391,9 +391,14 @@ class ForwardPassInversionEvent(ChainableEvent):
         candidate = context.get('candidate')
         prefix = context.get('prefix', [])
 
+        # Get model from context if not provided in __init__
+        model = self.model or context.get('model')
+        if model is None:
+            return Result.fail("No model provided")
+
         # Forward pass to target layer
         with torch.no_grad():
-            hidden = self.model.forward_to_layer(
+            hidden = model.forward_to_layer(
                 prefix + [candidate],
                 self.layer_idx
             )
